@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Portfolio - Симонов Роман Валерьевич</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Raleway:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-color: #bc13fe;
+            --bg-dark: #050008;
+            --text-white: #ffffff;
+            --frame-bg: #140028; /* Dark violet background for text */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-white);
+            font-family: 'Raleway', sans-serif;
+            overflow-x: hidden;
+            cursor: none; /* Custom cursor for cosmic feel */
+        }
+
+        /* Custom Cursor */
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid var(--neon-color);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background 0.3s;
+            box-shadow: 0 0 10px var(--neon-color);
+            mix-blend-mode: screen;
+        }
+
+        /* Hero Section (3D Galaxy) */
+        #hero {
+            position: relative;
+            height: 45vh;
+            width: 100%;
+            background: radial-gradient(circle at center, #100020 0%, #050008 100%);
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        #galaxy-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            /* Smooth transition mask to dissolve the bottom edge into the page */
+            -webkit-mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 0%, black 70%, transparent 100%);
+        }
+
+        #galaxy-canvas:active {
+            cursor: grabbing;
+        }
+
+        /* Smooth transition overlay for galaxy bottom edge */
+        .hero-bottom-fade {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(to bottom, rgba(5, 0, 8, 0) 0%, rgba(5, 0, 8, 0) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Main Content Section */
+        #content {
+            position: relative;
+            z-index: 2;
+            padding-bottom: 50vh; 
+            margin-top: -80px; 
+        }
+
+        /* Space.png backdrop with transparent fading strip at its top edge */
+        #content .space-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Space.png');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0px, transparent 30px, black 120px);
+            mask-image: linear-gradient(to bottom, transparent 0px, transparent 30px, black 120px);
+            -webkit-mask-size: 100% 100%;
+            mask-size: 100% 100%;
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            z-index: 0;
+        }
+
+        /* Portfolio Items with Image Frames */
+        .portfolio-container {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 90px 20px 50px;
+        }
+
+        .portfolio-item {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 60px;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+
+        .portfolio-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Frame Structure - One continuous text box from top to bottom frame */
+        .portfolio-frame {
+            position: relative;
+            background-color: var(--frame-bg);
+            background-image: url('Frame_top.png'), url('Frame_middle.png'), url('Frame_bottom.png');
+            background-repeat: no-repeat, repeat-y, no-repeat;
+            background-size: 100% auto;
+            background-position: top center, center center, bottom center;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .frame-content {
+            position: relative;
+            z-index: 2;
+            padding: 50px 40px 50px 40px; 
+            color: var(--text-white);
+        }
+
+        .portfolio-item h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--text-white);
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+        }
+
+        .portfolio-item p, .portfolio-item li {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+        }
+
+        .portfolio-item a {
+            color: var(--neon-color);
+            text-decoration: none;
+            border-bottom: 1px solid var(--neon-color);
+            transition: 0.3s;
+        }
+
+        .portfolio-item a:hover {
+            color: #fff;
+            text-shadow: 0 0 8px var(--neon-color);
+        }
+
+        .profile-header {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .profile-photo {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid var(--neon-color);
+            box-shadow: 0 0 20px var(--neon-color);
+        }
+
+        .skills-list {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .skills-list li::before {
+            content: '✦';
+            color: var(--neon-color);
+            margin-right: 10px;
+            font-size: 0.8em;
+        }
+
+        /* Spaceship Section */
+        #spaceship-zone {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 3;
+            pointer-events: none;
+            overflow: hidden;
+            display: none;
+            /* Added Space.png background to spaceship zone */
+            background-image: url('Space.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        #spaceship-stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #spaceship {
+            position: absolute;
+            width: 600px; /* Increased size twice */
+            height: auto;
+            z-index: 2;
+            transition: transform 0.1s ease-out; /* Smoothed via JS as well */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none;
+        }
+
+        #spaceship video {
+            display: block;
+            width: 600px;
+            height: auto;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-select: none;
+            /* Compensate the ship's off-center position within its video frame */
+            transform: translate(-24px, -3px);
+        }
+
+        /* Atmosphere Canvas (Edges & Mouse) */
+        #atmosphere-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            mix-blend-mode: screen;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0014; }
+        ::-webkit-scrollbar-thumb { background: var(--neon-color); border-radius: 4px; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="cursor"></div>
+    <canvas id="atmosphere-canvas"></canvas>
+
+    <!-- Hero Section: 3D Galaxy -->
+    <div id="hero">
+        <canvas id="galaxy-canvas"></canvas>
+        <div class="hero-bottom-fade"></div>
+    </div>
+
+    <!-- Portfolio Content -->
+    <div id="content">
+        <div class="space-backdrop"></div>
+        <div class="portfolio-container">
+            <!-- Item 1: Visible on load -->
+            <div class="portfolio-item visible" id="item-1">
+                <div class="portfolio-frame">
+                    <div class="frame-content">
+                        <div class="profile-header">
+                            <img src="Photo.jpeg" alt="Симонов Роман Валерьевич" class="profile-photo">
+                            <div>
+                                <h2>Симонов Роман Валерьевич</h2>
+                                <p style="font-size: 1.2rem; color: #bc13fe;">Профессиональные навыки</p>
+                            </div>
+                        </div>
+                        <br>
+                        <p>Разработка ПО с применением:</p>
+                        <ul class="skills-list">
+                            <li>Python</li>
+                            <li>C++</li>
+                            <li>Qt</li>
+                            <li>PyTorch</li>
+                            <li>MySQL</li>
+                        </ul>
+                        <p>Работа с ос Linux</p>
+                        <p>Разработка ПО для встраиваемых систем (микроконтроллеры STM32, Миландр)</p>
+                        <p>Машинное обучение, применение нейросетей для программирования и создания изображений.</p>
+                        <p>Знания в области схемотехники электронного оборудования, физики, математического анализа. Навыки работы в Mathcad и Matlab.</p>
+                        <p>Специализация включает применение методов машинного обучения и цифровой обработки сигналов.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 2: Appears on scroll -->
+            <div class="portfolio-item" id="item-2">
+                <div class="portfolio-frame">
+                        <div class="frame-content">
+                            <h2>Научная степень</h2>
+                            <p>Кандидат физико-математических наук. Тема диссертации: развитие методов оптимальной обработки ультразвуковых сигналов, защищена в Институте радиотехники и электроники им. В.А.Котельникова Российской академии наук.</p>
+                            </p> Научный руководитель: дф-мн, профессор Пахотин В. А.</a></p>
+							<p>С диссертацией можно ознакомиться по ссылке: <a href="http://www.cplire.ru/rus/dissertations/Simonov/" target="_blank">cplire.ru/rus/dissertations/Simonov/</a></p>
+                        </div>
+                    </div>
+            </div>
+
+            <!-- Item 3: Appears on scroll -->
+            <div class="portfolio-item" id="item-3">
+                <div class="portfolio-frame">
+                        <div class="frame-content">
+                            <h2>Место работы и публикации</h2>
+                            <p>НИИ Прикладной информатики и математической геофизики: <a href="https://kantiana.ru/science/departments/aimg/?ysclid=msowh4ixt6841084694" target="_blank">kantiana.ru</a></p>
+                            <p>Работа в команде над разработкой программного комплекса RTH-AI, позволяющего прогнозировать петрофизические, литологические и иные свойства коллектора углеводородов.</p>
+                            <p>Автор большого количества научных публикаций по цифровой обработке сигналов и сейсморазведке. С публикациями можно ознакомиться по ссылке <a href="https://elibrary.ru/author_items.asp?authorid=1042819" target="_blank">elibrary.ru</a></p>
+                            <p>Автор зарегистрированной программы для ЭВМ №2019661261 "Азимут", осуществляющей подавление помех при обработке радиолокационных сигналов.</p>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spaceship Section -->
+    <div id="spaceship-zone">
+        <canvas id="spaceship-stars"></canvas>
+        <!-- Note: Ensure Spaceship.webm is in the same directory. Rendering as <video> so WebM transparency + loop play in all browsers. -->
+        <div id="spaceship">
+            <video src="Spaceship.webm" autoplay muted loop playsinline disablepictureinpicture draggable="false" aria-label="Spaceship"></video>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- Custom Cursor Logic ---
+        const cursor = document.querySelector('.cursor');
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+
+        window.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px';
+            cursor.style.top = mouseY + 'px';
+        });
+
+        // --- 3D Galaxy Logic ---
+        const heroElement = document.getElementById('hero');
+        const heroCanvas = document.getElementById('galaxy-canvas');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, heroElement.clientWidth / heroElement.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: heroCanvas, alpha: true, antialias: true });
+        
+        function resizeHero() {
+            renderer.setSize(heroElement.clientWidth, heroElement.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            camera.aspect = heroElement.clientWidth / heroElement.clientHeight;
+            camera.updateProjectionMatrix();
+        }
+        resizeHero();
+
+        const galaxyGroup = new THREE.Group();
+        scene.add(galaxyGroup);
+
+        // Galaxy Parameters
+        const parameters = {
+            count: 15000,
+            size: 0.015,
+            radius: 8,
+            branches: 5,
+            spin: 1.5,
+            randomness: 0.6,
+            randomnessPower: 3
+        };
+
+        let geometry = null;
+        let material = null;
+        let points = null;
+
+        function generateGalaxy() {
+            if (points !== null) {
+                geometry.dispose();
+                material.dispose();
+                galaxyGroup.remove(points);
+            }
+
+            geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(parameters.count * 3);
+            const colors = new Float32Array(parameters.count * 3);
+            const randoms = new Float32Array(parameters.count); 
+
+            const colorWhite = new THREE.Color('#ffffff');
+            const colorRed = new THREE.Color('#ff4d4d');
+            const colorBlue = new THREE.Color('#4d4dff');
+
+            for (let i = 0; i < parameters.count; i++) {
+                const i3 = i * 3;
+                const radius = Math.random() * parameters.radius;
+                const spinAngle = radius * parameters.spin;
+                const branchAngle = (i % parameters.branches) / parameters.branches * Math.PI * 2;
+
+                const randomX = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
+                const randomY = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius * 0.5;
+                const randomZ = Math.pow(Math.random(), parameters.randomnessPower) * (Math.random() < 0.5 ? 1 : -1) * parameters.randomness * radius;
+
+                positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randomX;
+                positions[i3 + 1] = randomY;
+                positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ;
+
+                const colorChoice = Math.random();
+                if (colorChoice < 0.8) {
+                    colors[i3] = colorWhite.r; colors[i3 + 1] = colorWhite.g; colors[i3 + 2] = colorWhite.b;
+                } else if (colorChoice < 0.9) {
+                    colors[i3] = colorRed.r; colors[i3 + 1] = colorRed.g; colors[i3 + 2] = colorRed.b;
+                } else {
+                    colors[i3] = colorBlue.r; colors[i3 + 1] = colorBlue.g; colors[i3 + 2] = colorBlue.b;
+                }
+
+                // ========================================================
+                // --- РУЧНАЯ НАСТРОЙКА ЧАСТОТЫ ВСПЫШЕК ---
+                // Измените 0.01 (1%) на другое значение. 
+                // 0.05 = 5% звёзд (старое значение), 0.01 = 1% (в 5 раз реже).
+                // ========================================================
+                randoms[i] = Math.random() < 0.005 ? Math.random() * 10.0 : 0.0; 
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1));
+
+            material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTime: { value: 0 },
+                    uSize: { value: 30 * renderer.getPixelRatio() }
+                },
+                vertexShader: `
+                    uniform float uTime;
+                    uniform float uSize;
+                    attribute float aRandom;
+                    varying vec3 vColor;
+                    varying float vRandom;
+                    varying float vFlashSize;
+
+                    void main() {
+                        vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+                        vec4 viewPosition = viewMatrix * modelPosition;
+                        vec4 projectedPosition = projectionMatrix * viewPosition;
+
+                        gl_Position = projectedPosition;
+                        
+                        vFlashSize = 1.0; // Steady stars
+                        if (aRandom > 0.0) {
+                            float t = uTime * 0.5 + aRandom; 
+                            float cycle = fract(t);
+                            if (cycle < 0.3) {
+                                // Slowly igniting
+                                vFlashSize = 1.0 + cycle * 1.5; 
+                            } else if (cycle < 0.35) {
+                                // ========================================================
+                                // --- РУЧНАЯ НАСТРОЙКА РАЗМЕРА ВСПЫШЕК ---
+                                // Измените 3.0 на 6.0, чтобы сделать вспышки в 2 раза больше.
+                                // Текущее значение 3.0 делает их в 2 раза меньше прежнего.
+                                // ========================================================
+                                vFlashSize = 2.5 + (cycle - 0.3) * 10.0; // Peak reaches 3.0
+                            } else if (cycle < 0.6) {
+                                // Disappearing
+                                vFlashSize = 3.0 - (cycle - 0.35) * 8.0;
+                            } else {
+                                vFlashSize = 0.0; // Hidden
+                            }
+                        }
+                        
+                        gl_PointSize = uSize * vFlashSize * (1.0 / -viewPosition.z);
+                        vColor = color;
+                        vRandom = aRandom;
+                    }
+                `,
+                fragmentShader: `
+                    uniform float uTime;
+                    varying vec3 vColor;
+                    varying float vRandom;
+                    varying float vFlashSize;
+
+                    void main() {
+                        if (vFlashSize <= 0.0) discard;
+                        
+                        float dist = length(gl_PointCoord - vec2(0.5));
+                        float strength = 1.0 - dist * 2.0;
+                        strength = clamp(strength, 0.0, 1.0);
+                        strength = pow(strength, 3.0); 
+                        
+                        float brightness = 1.0; 
+                        vec3 final_color = vColor;
+
+                        if (vRandom > 0.0) {
+                            float t = uTime * 0.5 + vRandom;
+                            float cycle = fract(t);
+                            if (cycle < 0.3) {
+                                // Igniting
+                                brightness = cycle * 3.33; 
+                                final_color = mix(vColor, vec3(1.0), cycle);
+                            } else if (cycle < 0.35) {
+                                // Flash
+                                float f = (cycle - 0.3) / 0.05;
+                                brightness = 1.0 + f * 10.0; 
+                                final_color = vec3(1.0); // White in center
+                            } else if (cycle < 0.6) {
+                                // Disappear fade
+                                float f = 1.0 - (cycle - 0.35) / 0.25;
+                                brightness = f * 11.0;
+                                final_color = vec3(1.0); 
+                            } else {
+                                brightness = 0.0;
+                            }
+                        } else {
+                            brightness = 0.8; // Steady brightness
+                        }
+                        
+                        if (brightness <= 0.0) discard;
+
+                        gl_FragColor = vec4(final_color * brightness, brightness * strength);
+                    }
+                `,
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending,
+                vertexColors: true
+            });
+
+            points = new THREE.Points(geometry, material);
+            galaxyGroup.add(points);
+
+            // Foggy violet-blue glow at the center - FIXED TRANSPARENCY
+            const glowGeometry = new THREE.SphereGeometry(2, 32, 32);
+            const glowMaterial = new THREE.ShaderMaterial({
+                uniforms: { uTime: { value: 0 } },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+                        intensity = clamp(intensity, 0.0, 1.0); // Ensure it stays within valid bounds
+                        // Additive blending ignores alpha, so we multiply RGB by intensity and keep alpha 1.0
+                        gl_FragColor = vec4(vec3(0.5, 0.3, 0.8) * intensity, 1.0); 
+                    }
+                `,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            galaxyGroup.add(glow);
+        }
+
+        generateGalaxy();
+        camera.position.z = 6;
+        camera.position.y = 2;
+        camera.lookAt(0, 0, 0);
+
+        // --- Galaxy Mouse Rotation ---
+        let isDragging = false;
+        let prevX = 0, prevY = 0;
+        let targetRotX = -0.5;
+        let targetRotY = 0;
+
+        heroCanvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            prevX = e.clientX;
+            prevY = e.clientY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                targetRotY += (e.clientX - prevX) * 0.005;
+                targetRotX += (e.clientY - prevY) * 0.005;
+                prevX = e.clientX;
+                prevY = e.clientY;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // --- Atmosphere Canvas (Twinkling edges & Mouse Blinking) ---
+        const atmCanvas = document.getElementById('atmosphere-canvas');
+        const atmCtx = atmCanvas.getContext('2d');
+        let atmStars = [];
+        let atmTime = 0;
+        const portfolioItems = document.querySelectorAll('.portfolio-item');
+
+        function resizeAtmCanvas() {
+            atmCanvas.width = window.innerWidth;
+            atmCanvas.height = window.innerHeight;
+            initAtmStars();
+        }
+
+        function initAtmStars() {
+            atmStars = [];
+            const count = 300; 
+            for (let i = 0; i < count; i++) {
+                atmStars.push({
+                    x: Math.random() * atmCanvas.width,
+                    y: Math.random() * atmCanvas.height,
+                    size: Math.random() * 1.5 + 0.5,
+                    baseAlpha: Math.random() * 0.5 + 0.2,
+                    alpha: 0,
+                    speed: Math.random() * 0.02 + 0.005,
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function isOverText(x, y) {
+            for (let i = 0; i < portfolioItems.length; i++) {
+                const r = portfolioItems[i].getBoundingClientRect();
+                if (x > r.left && x < r.right && y > r.top && y < r.bottom) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function drawAtmosphere() {
+            atmTime += 0.05;
+            atmCtx.clearRect(0, 0, atmCanvas.width, atmCanvas.height);
+            
+            atmStars.forEach(star => {
+                if (isOverText(star.x, star.y)) return;
+
+                star.angle += star.speed;
+                let twinkle = Math.sin(star.angle) * 0.5 + 0.5;
+                let alpha = star.baseAlpha * twinkle;
+
+                const dx = star.x - mouseX;
+                const dy = star.y - mouseY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 250) { 
+                    let blink = Math.sin(atmTime * 5 + star.x) * 0.5 + 0.5;
+                    alpha = blink * (1 - dist/250);
+                    atmCtx.shadowColor = 'rgba(188, 19, 254, 0.8)';
+                    atmCtx.shadowBlur = 10;
+                } else {
+                    atmCtx.shadowBlur = 0;
+                }
+
+                atmCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                atmCtx.beginPath();
+                atmCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                atmCtx.fill();
+            });
+            
+            requestAnimationFrame(drawAtmosphere);
+        }
+
+        // --- Spaceship Logic ---
+        const spaceshipZone = document.getElementById('spaceship-zone');
+        const spaceshipImg = document.getElementById('spaceship');
+        const ssStarsCanvas = document.getElementById('spaceship-stars');
+        const ssCtx = ssStarsCanvas.getContext('2d');
+        
+        let shipX = window.innerWidth / 2;
+        let shipY = window.innerHeight - 200;
+        let targetX = shipX;
+        let targetY = shipY;
+        let currentAngle = 0; // Added for smooth rotation
+        let ssStars = [];
+        let lasers = [];
+        let isFiring = false;
+
+        function resizeShipCanvas() {
+            ssStarsCanvas.width = spaceshipZone.offsetWidth;
+            ssStarsCanvas.height = spaceshipZone.offsetHeight;
+        }
+
+        function initShipStars() {
+            ssStars = [];
+            for(let i=0; i<200; i++) {
+                ssStars.push({
+                    x: Math.random() * ssStarsCanvas.width,
+                    y: Math.random() * ssStarsCanvas.height,
+                    speed: Math.random() * 5 + 2,
+                    size: Math.random() * 2 + 0.5,
+                    alpha: Math.random() * 0.8 + 0.2
+                });
+            }
+        }
+
+        function drawShipScene() {
+            if (spaceshipZone.style.display !== 'block') return;
+            
+            // Clear instead of filling dark so Space.png shows through as the backdrop
+            ssCtx.clearRect(0, 0, ssStarsCanvas.width, ssStarsCanvas.height);
+
+            ssStars.forEach(star => {
+                star.x -= star.speed;
+                if (star.x < 0) {
+                    star.x = ssStarsCanvas.width;
+                    star.y = Math.random() * ssStarsCanvas.height;
+                }
+                ssCtx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+                ssCtx.beginPath();
+                ssCtx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ssCtx.fill();
+            });
+
+            shipX += (targetX - shipX) * 0.025;
+            shipY += (targetY - shipY) * 0.025;
+
+            // Calculate target angle
+            let targetAngle = Math.atan2(targetY - shipY, targetX - shipX);
+            
+            // Smooth angle interpolation (shortest path)
+            let diff = targetAngle - currentAngle;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            currentAngle += diff * 0.05; // Smooth rotation speed
+            
+            // Anchor toward the bottom band so the ship flies near the bottom of Space.png
+            const shipW = spaceshipImg.offsetWidth || 300;
+            const shipH = spaceshipImg.offsetHeight || 300; // Fallback just in case
+            
+            spaceshipImg.style.left = (shipX - shipW / 2) + 'px';
+            spaceshipImg.style.top = (shipY - shipH / 2) + 'px';
+            spaceshipImg.style.transform = `rotate(${currentAngle}rad)`;
+
+            if (isFiring) {
+                const div = spaceshipImg;
+                const video = div.querySelector('video');
+                // Real rendered rotation matrix of the ship (read from CSS, not assumed).
+                const m = new DOMMatrix(getComputedStyle(div).transform);
+                const dr = div.getBoundingClientRect();
+                // Rotation pivot = center of the ship box.
+                const pivotX = dr.left + dr.width / 2;
+                const pivotY = dr.top + dr.height / 2;
+                // Center of the video's RIGHT edge, in the ship's local (unrotated) frame.
+                // shipW/2 - 24 accounts for the recenter translate; -3 the vertical one.
+                const offX = shipW / 2 - 24;
+                const offY = -3;
+                // Transform that local point by the ship's rotation into world coords.
+                const ox = pivotX + offX * m.a + offY * m.c;
+                const oy = pivotY + offX * m.b + offY * m.d;
+                // Video's local +X axis, rotated — the turned image X-axis the laser follows.
+                const dx = m.a, dy = m.b;
+                lasers.push({
+                    x: ox,
+                    y: oy,
+                    vx: dx * 30,
+                    vy: dy * 30,
+                    life: 1.0
+                });
+            }
+
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                let p = lasers[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Decreased decay rate (0.015 instead of 0.04) so they live much longer
+                p.life -= 0.015; 
+                
+                if (p.life <= 0) {
+                    lasers.splice(i, 1);
+                    continue;
+                }
+
+                ssCtx.beginPath();
+                ssCtx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
+                ssCtx.shadowColor = '#00ffff'; 
+                ssCtx.shadowBlur = 15;
+                ssCtx.arc(p.x, p.y, 4 * p.life, 0, Math.PI * 2);
+                ssCtx.fill();
+            }
+            ssCtx.shadowBlur = 0;
+
+            requestAnimationFrame(drawShipScene);
+        }
+
+        // --- Scroll & Reveal Logic ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.2 });
+
+        portfolioItems.forEach(item => observer.observe(item));
+
+        window.addEventListener('scroll', () => {
+            const scrollPosition = window.innerHeight + window.scrollY;
+            const bodyHeight = document.body.offsetHeight;
+            
+            if (scrollPosition >= bodyHeight - 100) {
+                if (spaceshipZone.style.display !== 'block') {
+                    spaceshipZone.style.display = 'block';
+                    resizeShipCanvas();
+                    initShipStars();
+                    drawShipScene();
+                }
+            } else {
+                if (spaceshipZone.style.display === 'block') {
+                    spaceshipZone.style.display = 'none';
+                }
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (spaceshipZone.style.display === 'block') {
+                targetY = e.clientY;
+                // keep ship within the bottom band
+                if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
+                targetX = e.clientX;
+            }
+        });
+
+        window.addEventListener('mousedown', (e) => {
+            if (e.button === 0 && spaceshipZone.style.display === 'block') {
+                e.preventDefault(); // stop text-selection/search toolbar, keep firing
+                isFiring = true;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isFiring = false;
+        });
+
+        // --- Animation Loop for Galaxy ---
+        const clock = new THREE.Clock();
+        function animateGalaxy() {
+            const elapsedTime = clock.getElapsedTime();
+            material.uniforms.uTime.value = elapsedTime;
+            
+            galaxyGroup.rotation.x += (targetRotX - galaxyGroup.rotation.x) * 0.1;
+            galaxyGroup.rotation.y += (targetRotY - galaxyGroup.rotation.y) * 0.1;
+            
+            points.rotation.y = elapsedTime * 0.05; 
+            
+            renderer.render(scene, camera);
+            requestAnimationFrame(animateGalaxy);
+        }
+
+        // --- Resize Handlers ---
+        window.addEventListener('resize', () => {
+            resizeHero();
+            material.uniforms.uSize.value = 30 * renderer.getPixelRatio();
+            resizeAtmCanvas();
+            if (spaceshipZone.style.display === 'block') resizeShipCanvas();
+        });
+
+        // --- Initializations ---
+        resizeAtmCanvas();
+        drawAtmosphere();
+        animateGalaxy();
+
+    </script>
+</body>
+</html>
