@@ -396,8 +396,8 @@
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(200, t0);
-            osc.frequency.linearRampToValueAtTime(1000, t0 + dur);
+            osc.frequency.setValueAtTime(1000, t0);
+            osc.frequency.linearRampToValueAtTime(200, t0 + dur);
             // Gaussian envelope: peak around middle (mu = 0.05), sigma = 0.02
             const mu = 0.05, sigma = 0.02;
             const n = 32;
@@ -897,10 +897,10 @@
                 }
 
                 // Random flashes with smooth rise/fade via sliding mean:
-                // 10 values per second, 3-value averaging window, brightness 20%..100%
+                // ~30 values per second, 3-value averaging window, brightness 20%..100%
                 p.flashTimer += 16.7; // ms per frame (~60fps)
-                if (p.flashTimer >= 100) {
-                    p.flashTimer -= 100;
+                if (p.flashTimer >= 33) {
+                    p.flashTimer -= 33;
                     p.flashBuf.push(Math.random() * 0.8 + 0.2); // 0.2 .. 1.0
                     if (p.flashBuf.length > 3) p.flashBuf.shift();
                 }
@@ -980,14 +980,54 @@
             }
         });
 
-        window.addEventListener('touchmove', (e) => {
-            if (spaceshipZone.style.display === 'block') {
-                const t = e.touches[0];
-                targetY = t.clientY;
-                if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
-                targetX = t.clientX;
-            }
+        // Ship touch gesture: distinguish a tap/short steer from a long upward swipe.
+        // A long upward swipe scrolls the page; a tap only steers the ship.
+        let shipTouchStartX = 0, shipTouchStartY = 0, shipTouchStartT = 0;
+        let shipGestureScroll = false;
+        let shipLastTouchY = 0;
+        const SHIP_SCROLL_TRIGGER = 45; // px of upward travel before scrolling starts
+
+        window.addEventListener('touchstart', (e) => {
+            if (spaceshipZone.style.display !== 'block') return;
+            const t = e.touches[0];
+            shipTouchStartX = t.clientX;
+            shipTouchStartY = t.clientY;
+            shipTouchStartT = performance.now();
+            shipLastTouchY = t.clientY;
+            shipGestureScroll = false;
         }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (spaceshipZone.style.display !== 'block') return;
+            const t = e.touches[0];
+            const dy = shipTouchStartY - t.clientY; // upward travel (positive = swiping up)
+            const dx = t.clientX - shipTouchStartX;
+
+            // Trigger scroll mode once the finger has moved far up (mostly vertical), unless
+            // the gesture started with too little time (that's a tap).
+            if (!shipGestureScroll &&
+                dy > SHIP_SCROLL_TRIGGER &&
+                Math.abs(dy) > Math.abs(dx) * 1.5 &&
+                (performance.now() - shipTouchStartT) > 60) {
+                shipGestureScroll = true;
+                e.preventDefault();
+                return;
+            }
+
+            if (shipGestureScroll) {
+                // Long upward swipe -> scroll the page, do not steer the ship.
+                const deltaY = t.clientY - shipLastTouchY;
+                window.scrollBy(0, deltaY);
+                shipLastTouchY = t.clientY;
+                e.preventDefault();
+                return;
+            }
+
+            // Otherwise (tap / short drag) -> steer the ship
+            targetY = t.clientY;
+            if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
+            targetX = t.clientX;
+        }, { passive: false });
 
         window.addEventListener('mousedown', (e) => {
             if (e.button === 0 && spaceshipZone.style.display === 'block') {
@@ -1005,6 +1045,11 @@
         let lastTapTime = 0;
         window.addEventListener('touchend', (e) => {
             if (spaceshipZone.style.display !== 'block') return;
+            // If this was a scroll gesture, do not treat it as a tap/shot.
+            if (shipGestureScroll) {
+                shipGestureScroll = false;
+                return;
+            }
             ensureAudio();
             const now = performance.now();
             if (now - lastTapTime < 300) {
