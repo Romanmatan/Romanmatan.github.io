@@ -1,1 +1,25 @@
 _preview/
+
+# ------------------------------------------------------------------
+# HOW TO PRODUCE Spaceship.webm (run with a modern FFmpeg build)
+# ------------------------------------------------------------------
+# Source: D:\download\Spaceship2.mp4 (green-screen ship, 24 fps, 5.04s)
+#
+# ffmpeg -y -i D:/download/Spaceship2.mp4 \
+#   -filter_complex "[0:v]scale=-2:480,chromakey=green:0.1:0.1,setpts=0.667*PTS[out]" \
+#   -map "[out]" -c:v libvpx -pix_fmt yuva420p -auto-alt-ref 0 -b:v 1M \
+#   Spaceship.webm
+#
+# What each part does:
+#   scale=-2:480          -> 480p output (width auto)
+#   chromakey=green:0.1:0.1 -> green (0,255,0) background -> transparent
+#   setpts=0.667*PTS      -> speed up 50% (1.5x). Omit for normal speed.
+#   -c:v libvpx           -> VP8, the only WebM codec FFmpeg supports with alpha
+#   -pix_fmt yuva420p     -> includes the alpha (transparency) channel
+#   -auto-alt-ref 0       -> REQUIRED so VP8 keeps its alpha track
+#   -b:v 1M               -> target bitrate
+#
+# NOTE: leave out setpts for a normal loop, or add split/reverse/concat for a
+# ping-pong loop. Verify with: ffmpeg -v verbose -i Spaceship.webm (look for
+# "alpha_mode: 1"). Spaceship.webm is NOT ignored and should be committed.
+# ------------------------------------------------------------------
