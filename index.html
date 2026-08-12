@@ -281,8 +281,9 @@
         .fire-btn {
             position: fixed;
             display: none;
-            right: 24px;
+            left: 50%;
             bottom: 40px;
+            transform: translateX(-50%);
             width: 76px;
             height: 76px;
             border-radius: 50%;
@@ -296,8 +297,11 @@
             -webkit-user-select: none;
             touch-action: none;
             outline: none;
+            -webkit-tap-highlight-color: transparent;
+            appearance: none;
+            -webkit-appearance: none;
         }
-        .fire-btn:active { transform: scale(0.9); }
+        .fire-btn:active { transform: translateX(-50%) scale(0.9); }
         .mobile .fire-btn { display: block; }
 
         /* Atmosphere Canvas (Edges & Mouse) */
@@ -859,6 +863,7 @@
         let targetX = shipX;
         let targetY = shipY;
         let currentAngle = 0; // Added for smooth rotation
+        if (isMobile) currentAngle = -Math.PI / 2; // Face up on mobile (top-down flight)
         let ssStars = [];
         let plasma = [];
         let isFiring = false;
@@ -967,8 +972,15 @@
             const vx = (Math.random() * 5 + 2) / 3;
             // Spawn from outside the visible screen at a random position on the right edge
             // (either fully off-screen to the right, or just entering at a random spot).
-            const x = W + radius + Math.random() * 80;
-            const y = radius + Math.random() * (H - radius * 2);
+            // On mobile the ship faces up and flows downward, so spawn from the top.
+            let x, y;
+            if (isMobile) {
+                x = radius + Math.random() * (W - radius * 2);
+                y = -radius - Math.random() * 80;
+            } else {
+                x = W + radius + Math.random() * 80;
+                y = radius + Math.random() * (H - radius * 2);
+            }
             const shape = makeAsteroidShape();
             const a = {
                 x, y, radius,
@@ -998,9 +1010,17 @@
         function updateAsteroids(list) {
             for (let i = list.length - 1; i >= 0; i--) {
                 const a = list[i];
-                a.x -= a.vx;
+                if (isMobile) {
+                    a.y += a.vx; // downward flight on mobile
+                } else {
+                    a.x -= a.vx; // right-to-left flight on desktop
+                }
                 a.rot += a.rotSpeed;
-                if (a.x + a.radius < 0) list.splice(i, 1);
+                if (isMobile) {
+                    if (a.y - a.radius > ssStarsCanvas.height) list.splice(i, 1);
+                } else {
+                    if (a.x + a.radius < 0) list.splice(i, 1);
+                }
             }
         }
 
@@ -1295,10 +1315,19 @@ function drawAsteroid(ctx, a) {
                 ssFgCtx.clearRect(0, 0, ssFgCanvas.width, ssFgCanvas.height);
 
             ssStars.forEach(star => {
-                star.x -= star.speed;
-                if (star.x < 0) {
-                    star.x = ssStarsCanvas.width;
-                    star.y = Math.random() * ssStarsCanvas.height;
+                if (isMobile) {
+                    // Mobile: stars fall from the top (downward flow).
+                    star.y += star.speed;
+                    if (star.y > ssStarsCanvas.height) {
+                        star.y = -star.size;
+                        star.x = Math.random() * ssStarsCanvas.width;
+                    }
+                } else {
+                    star.x -= star.speed;
+                    if (star.x < 0) {
+                        star.x = ssStarsCanvas.width;
+                        star.y = Math.random() * ssStarsCanvas.height;
+                    }
                 }
                 ssCtx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
                 ssCtx.beginPath();
@@ -1339,15 +1368,21 @@ function drawAsteroid(ctx, a) {
                     // Rotation pivot = center of the ship box.
                     const pivotX = dr.left + dr.width / 2;
                     const pivotY = dr.top + dr.height / 2;
-                    // Center of the video's RIGHT edge, in the ship's local (unrotated) frame.
-                    // shipW/2 - 24*shipScale accounts for the video's recenter translate
-                    // (which scales with the ship), and -3*shipScale the vertical one —
-                    // so the muzzle stays correct at any ship scale (incl. mobile).
-                    const offX = shipW / 2 - 24 * shipScale;
-                    const offY = -3 * shipScale;
-                    // Transform that local point by the ship's rotation into world coords.
-                    const ox = pivotX + offX * m.a + offY * m.c;
-                    const oy = pivotY + offX * m.b + offY * m.d;
+                    // Muzzle = the video's RIGHT-edge center, derived from the video element's real
+                    // layout + its own CSS translate, then rotated about the div pivot.
+                    // Reading the actual DOM means it stays correct at any ship scale
+                    // (desktop 600 / mobile 200) — no hardcoded 24/3 assumptions.
+                    const vid = spaceshipImg.querySelector('video');
+                    const vt = new DOMMatrix(getComputedStyle(vid).transform); // tx,ty translate
+                    const vidW = vid.offsetWidth || 0;
+                    const vidH = vid.offsetHeight || 0;
+                    const muzzleLX = vid.offsetLeft + vidW + vt.e; // right edge + translate
+                    const muzzleLY = vid.offsetTop + vidH / 2 + vt.f; // vertical center + translate
+                    const relX = muzzleLX - shipW / 2;
+                    const relY = muzzleLY - shipH / 2;
+                    // Transform that point by the ship's rotation into world coords.
+                    const ox = pivotX + relX * m.a + relY * m.c;
+                    const oy = pivotY + relX * m.b + relY * m.d;
                     // Video's local +X axis, rotated — the turned image X-axis the shot follows.
                     const dx = m.a, dy = m.b;
                     // Speed to cross the canvas diagonal in ~0.7s (assume ~60fps)
@@ -1491,6 +1526,8 @@ function drawAsteroid(ctx, a) {
 
         window.addEventListener('touchstart', (e) => {
             if (spaceshipZone.style.display !== 'block') return;
+            // Don't steer/scroll when touching the fire button region.
+            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
             const t = e.touches[0];
             shipTouchStartX = t.clientX;
             shipTouchStartY = t.clientY;
@@ -1501,6 +1538,8 @@ function drawAsteroid(ctx, a) {
 
         window.addEventListener('touchmove', (e) => {
             if (spaceshipZone.style.display !== 'block') return;
+            // Don't steer/scroll when touching the fire button region.
+            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
             const t = e.touches[0];
             const dy = shipTouchStartY - t.clientY; // upward travel (positive = swiping up)
             const dx = t.clientX - shipTouchStartX;
