@@ -306,6 +306,41 @@
         .fire-btn:active { transform: translateX(-50%) scale(0.9); }
         .mobile .fire-btn { display: block; }
 
+        /* Back-to-content button (top-right, half-transparent, up arrow).
+           Same control-exempt region as the fire button so it never steers the ship. */
+        .nav-btn {
+            position: fixed;
+            display: none;
+            z-index: 6;
+            pointer-events: auto;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.18);
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            color: #fff;
+            font-size: 30px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 14px rgba(188, 19, 254, 0.5);
+        }
+        #back-btn {
+            top: 20px;
+            right: 20px;
+            width: 62px;
+            height: 62px;
+            border-radius: 50%;
+        }
+        #back-btn:active { background: rgba(255, 255, 255, 0.32); }
+        .mobile #back-btn { display: flex; }
+
         /* Atmosphere Canvas (Edges & Mouse) */
         #atmosphere-canvas {
             position: fixed;
@@ -410,7 +445,8 @@
         <div id="spaceship">
             <video src="Spaceship.webm" autoplay muted loop playsinline disablepictureinpicture draggable="false" aria-label="Spaceship"></video>
         </div>
-        <button id="fire-btn" class="fire-btn" aria-label="Fire"></button>
+        <button id="fire-btn" class="fire-btn ship-control-exempt" aria-label="Fire"></button>
+        <button id="back-btn" class="nav-btn ship-control-exempt" aria-label="Back to content">&#9650;</button>
     </div>
 
     <script type="module">
@@ -419,6 +455,9 @@
         // --- Mobile Detection ---
         const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
         if (isMobile) document.body.classList.add('mobile');
+
+        // Mobile motion is halved so asteroids/particles aren't too fast on phones.
+        const SPEED_M = isMobile ? 0.5 : 1;
 
         // --- Audio (lazy Web Audio context) ---
         let audioCtx = null;
@@ -956,7 +995,7 @@
                 ssStars.push({
                     x: Math.random() * ssStarsCanvas.width,
                     y: Math.random() * ssStarsCanvas.height,
-                    speed: Math.random() * 5 + 2,
+                    speed: (Math.random() * 5 + 2) * SPEED_M,
                     size: Math.random() * 2 + 0.5,
                     alpha: Math.random() * 0.8 + 0.2
                 });
@@ -990,7 +1029,7 @@
             const H = ssStarsCanvas.height;
             const radius = shipMaxRadius() * (0.5 + Math.random() * 0.7); // varied size
             // Stars move 2..7 px/frame; asteroid is exactly 3x slower.
-            const vx = (Math.random() * 5 + 2) / 3;
+            const vx = ((Math.random() * 5 + 2) / 3) * SPEED_M;
             // Spawn from outside the visible screen at a random position on the right edge
             // (either fully off-screen to the right, or just entering at a random spot).
             // On mobile the ship faces up and flows downward, so spawn from the top.
@@ -1057,13 +1096,13 @@
             const n = Math.round((28 + Math.random() * 18) * k);
             for (let i = 0; i < n; i++) {
                 const ang = Math.random() * Math.PI * 2;
-                const sp = (Math.random() * 3 + 1) * (0.8 + k); // larger spread
+                const sp = (Math.random() * 3 + 1) * (0.8 + k) * SPEED_M; // larger spread
                 dust.push({
                     x, y,
                     vx: Math.cos(ang) * sp,
-                    vy: Math.sin(ang) * sp - 1.2 * k, // stronger upward pop with size
+                    vy: Math.sin(ang) * sp - 1.2 * k * SPEED_M, // stronger upward pop with size
                     life: 1.0,
-                    g: 0.04,
+                    g: 0.04 * SPEED_M,
                     size: (Math.random() * 6 + 3) * k, // larger particles overall
                     shade: Math.random() * 0.4 + 0.4
                 });
@@ -1072,13 +1111,13 @@
             const fireN = Math.round((14 + Math.random() * 10) * k);
             for (let i = 0; i < fireN; i++) {
                 const ang = Math.random() * Math.PI * 2;
-                const sp = (Math.random() * 2.5 + 0.8) * (0.7 + k);
+                const sp = (Math.random() * 2.5 + 0.8) * (0.7 + k) * SPEED_M;
                 dust.push({
                     x, y,
                     vx: Math.cos(ang) * sp,
-                    vy: Math.sin(ang) * sp - (1.5 + Math.random() * 1.5) * k, // strong upward pop
+                    vy: Math.sin(ang) * sp - (1.5 + Math.random() * 1.5) * k * SPEED_M, // strong upward pop
                     life: 1.0,
-                    g: -0.02,             // buoyancy: rises instead of falling
+                    g: -0.02 * SPEED_M,      // buoyancy: rises instead of falling
                     size: (Math.random() * 7 + 5) * k,
                     fire: true,
                     hue: Math.random()    // 0..1 -> yellow..orange..red
@@ -1089,7 +1128,7 @@
                 ring: true,
                 x, y,
                 r: radius * 0.4,
-                grow: radius * 1.6 / 40, // 0.4 -> 2.0 of asteroid radius
+                grow: (radius * 1.6 / 40) * SPEED_M, // 0.4 -> 2.0 of asteroid radius
                 life: 1.0,
                 fade: 1 / 40
             });
@@ -1521,8 +1560,8 @@ function drawAsteroid(ctx, a) {
         });
 
         window.addEventListener('mousemove', (e) => {
-            // Never steer from a synthesized event over the fire button.
-            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
+            // Never steer from a synthesized event over a control-exempt button.
+            if (e.target && e.target.closest && e.target.closest('.ship-control-exempt')) return;
             if (spaceshipZone.style.display === 'block') {
                 targetY = e.clientY;
                 // keep ship within the bottom band
@@ -1531,62 +1570,30 @@ function drawAsteroid(ctx, a) {
             }
         });
 
-        // Ship touch gesture: distinguish a tap/short steer from a long upward swipe.
-        // A long upward swipe scrolls the page; a tap only steers the ship.
-        let shipTouchStartX = 0, shipTouchStartY = 0, shipTouchStartT = 0;
-        let shipGestureScroll = false;
-        let shipLastTouchY = 0;
-        const SHIP_SCROLL_TRIGGER = 45; // px of upward travel before scrolling starts
-
+        // Ship touch control. While the simulation is active the page must NOT drag/scroll:
+        // any touch that isn't on a control-exempt button is prevented from scrolling and
+        // instead steers the ship. Returning to the text content is done via the back button.
         window.addEventListener('touchstart', (e) => {
             if (spaceshipZone.style.display !== 'block') return;
-            // Don't steer/scroll when touching the fire button region.
-            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
-            const t = e.touches[0];
-            shipTouchStartX = t.clientX;
-            shipTouchStartY = t.clientY;
-            shipTouchStartT = performance.now();
-            shipLastTouchY = t.clientY;
-            shipGestureScroll = false;
+            // Ignore touches on control-exempt buttons (fire / back).
+            if (e.target && e.target.closest && e.target.closest('.ship-control-exempt')) return;
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
             if (spaceshipZone.style.display !== 'block') return;
-            // Don't steer/scroll when touching the fire button region.
-            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
+            // Let control-exempt buttons (fire / back) handle their own events.
+            if (e.target && e.target.closest && e.target.closest('.ship-control-exempt')) return;
+            // Disable page drag during the simulation; steer the ship instead.
+            e.preventDefault();
             const t = e.touches[0];
-            const dy = shipTouchStartY - t.clientY; // upward travel (positive = swiping up)
-            const dx = t.clientX - shipTouchStartX;
-
-            // Trigger scroll mode once the finger has moved far up (mostly vertical), unless
-            // the gesture started with too little time (that's a tap).
-            if (!shipGestureScroll &&
-                dy > SHIP_SCROLL_TRIGGER &&
-                Math.abs(dy) > Math.abs(dx) * 1.5 &&
-                (performance.now() - shipTouchStartT) > 60) {
-                shipGestureScroll = true;
-                e.preventDefault();
-                return;
-            }
-
-            if (shipGestureScroll) {
-                // Long upward swipe -> scroll the page, do not steer the ship.
-                const deltaY = t.clientY - shipLastTouchY;
-                window.scrollBy(0, deltaY);
-                shipLastTouchY = t.clientY;
-                e.preventDefault();
-                return;
-            }
-
-            // Otherwise (tap / short drag) -> steer the ship
             targetY = t.clientY;
             if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
             targetX = t.clientX;
         }, { passive: false });
 
         window.addEventListener('mousedown', (e) => {
-            // Ignore presses that originate on the fire button (handled separately).
-            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
+            // Ignore presses that originate on a control-exempt button (handled separately).
+            if (e.target && e.target.closest && e.target.closest('.ship-control-exempt')) return;
             if (e.button === 0 && spaceshipZone.style.display === 'block') {
                 ensureAudio();
                 e.preventDefault(); // stop text-selection/search toolbar, keep firing
@@ -1623,6 +1630,20 @@ function drawAsteroid(ctx, a) {
         fireBtn.addEventListener('mouseup', fireBtnRelease);
         fireBtn.addEventListener('mouseleave', fireBtnRelease);
 
+        // Back-to-content button: scrolls the page up out of the ship simulation.
+        // It is a control-exempt element so it never steers the ship.
+        const backBtn = document.getElementById('back-btn');
+        function backToContent(e) {
+            if (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }
+            const content = document.getElementById('content');
+            const top = content ? content.getBoundingClientRect().top + window.scrollY : 0;
+            window.scrollTo({ top, behavior: 'smooth' });
+        }
+        backBtn.addEventListener('touchstart', backToContent, { passive: false });
+        backBtn.addEventListener('touchend', backToContent, { passive: false });
+        backBtn.addEventListener('mousedown', backToContent);
+        backBtn.addEventListener('click', backToContent);
+
         // --- Force the spaceship video to actually play ---
         // On some mobile browsers muted inline autoplay is still blocked, leaving the
         // <video> showing its green default first-paint instead of the transparent ship.
@@ -1641,10 +1662,7 @@ function drawAsteroid(ctx, a) {
         window.addEventListener('touchstart', tryPlayShip, { passive: true, once: false });
         window.addEventListener('mousedown', tryPlayShip, { once: false });
 
-        // Clear the scroll-gesture flag on touch release (steering only; firing is via button)
-        window.addEventListener('touchend', () => {
-            if (shipGestureScroll) shipGestureScroll = false;
-        }, { passive: true });
+        // (Firing is stopped by the fire button's own touchend/mouseup handlers.)
 
         // --- Animation Loop for Galaxy ---
         const clock = new THREE.Clock();
