@@ -255,7 +255,8 @@
             width: 600px; /* Increased size twice */
             height: auto;
             z-index: 2;
-            transition: transform 0.1s ease-out; /* Smoothed via JS as well */
+            /* No CSS transition: JS already smooths the transform every frame via lerp.
+               A transition here forces the browser to restart it every frame -> jank/freeze on mobile. */
             user-select: none;
             -webkit-user-select: none;
             -webkit-user-drag: none;
@@ -273,6 +274,7 @@
             pointer-events: none;
             user-select: none;
             -webkit-user-select: none;
+            background: transparent;
             /* Compensate the ship's off-center position within its video frame */
             transform: translate(-24px, -3px);
         }
@@ -820,6 +822,12 @@
         }
 
         function drawAtmosphere() {
+            // When the full-screen spaceship zone is visible it covers the atmosphere
+            // canvas, so skip the per-frame work (cheap pause) and just keep the loop alive.
+            if (spaceshipZone.style.display === 'block') {
+                requestAnimationFrame(drawAtmosphere);
+                return;
+            }
             atmTime += 0.05;
             atmCtx.clearRect(0, 0, atmCanvas.width, atmCanvas.height);
             
@@ -864,6 +872,14 @@
         let targetY = shipY;
         let currentAngle = 0; // Added for smooth rotation
         if (isMobile) currentAngle = -Math.PI / 2; // Face up on mobile (top-down flight)
+
+        // Muzzle offset in the ship's own (600px) coordinate space, measured at the
+        // ship's center. These are the *working* desktop values (right-edge + translate
+        // -24/-3) so they stay correct on every ship scale: we just multiply by shipScale.
+        // Kept as constants so the shot origin no longer depends on getComputedStyle /
+        // offsetWidth reads that can be wrong before the video lays out on mobile.
+        const MUZZLE_X = 276; // video right edge (600) + translate(-24) - half ship (300)
+        const MUZZLE_Y = -3;  // video vertical center + translate(-3) - half ship (300)
         let ssStars = [];
         let plasma = [];
         let isFiring = false;
@@ -872,6 +888,7 @@
         let fgAsteroids = [];
         let dust = [];
         let asteroidSpawnTimer = 0;
+        let cachedShipW = 600, cachedShipH = 600; // updated in resizeShipCanvas
         let asteroidTex = null;       // offscreen grey-brown rock texture canvas
         const ssFgCanvas = document.getElementById('spaceship-fg');
         const ssFgCtx = ssFgCanvas.getContext('2d');
@@ -926,6 +943,10 @@
             ssStarsCanvas.height = spaceshipZone.offsetHeight;
             ssFgCanvas.width = spaceshipZone.offsetWidth;
             ssFgCanvas.height = spaceshipZone.offsetHeight;
+            // Cache the ship size so the per-frame loop never has to read offsetWidth
+            // (which forces a synchronous layout flush every frame on mobile).
+            cachedShipW = spaceshipImg.offsetWidth || 300;
+            cachedShipH = spaceshipImg.offsetHeight || 300;
             if (asteroidTex) buildAsteroidTexture();
         }
 
@@ -1348,8 +1369,8 @@ function drawAsteroid(ctx, a) {
             currentAngle += diff * 0.025; // Smooth rotation speed (50% slower)
             
             // Anchor toward the bottom band so the ship flies near the bottom of Space.png
-            const shipW = spaceshipImg.offsetWidth || 300;
-            const shipH = spaceshipImg.offsetHeight || 300; // Fallback just in case
+            const shipW = cachedShipW;
+            const shipH = cachedShipH;
             const shipScale = shipW / 600; // 1 on desktop, ~1/3 on mobile (200px ship)
             
             spaceshipImg.style.left = (shipX - shipW / 2) + 'px';
@@ -1361,30 +1382,21 @@ function drawAsteroid(ctx, a) {
                 // Throttled single shots: at most one plasma ball per ~0.25s
                 if (now - lastShotTime > 250) {
                     lastShotTime = now;
-                    const div = spaceshipImg;
-                    // Real rendered rotation matrix of the ship (read from CSS, not assumed).
-                    const m = new DOMMatrix(getComputedStyle(div).transform);
-                    const dr = div.getBoundingClientRect();
-                    // Rotation pivot = center of the ship box.
-                    const pivotX = dr.left + dr.width / 2;
-                    const pivotY = dr.top + dr.height / 2;
-                    // Muzzle = the video's RIGHT-edge center, derived from the video element's real
-                    // layout + its own CSS translate, then rotated about the div pivot.
-                    // Reading the actual DOM means it stays correct at any ship scale
-                    // (desktop 600 / mobile 200) — no hardcoded 24/3 assumptions.
-                    const vid = spaceshipImg.querySelector('video');
-                    const vt = new DOMMatrix(getComputedStyle(vid).transform); // tx,ty translate
-                    const vidW = vid.offsetWidth || 0;
-                    const vidH = vid.offsetHeight || 0;
-                    const muzzleLX = vid.offsetLeft + vidW + vt.e; // right edge + translate
-                    const muzzleLY = vid.offsetTop + vidH / 2 + vt.f; // vertical center + translate
-                    const relX = muzzleLX - shipW / 2;
-                    const relY = muzzleLY - shipH / 2;
-                    // Transform that point by the ship's rotation into world coords.
-                    const ox = pivotX + relX * m.a + relY * m.c;
-                    const oy = pivotY + relX * m.b + relY * m.d;
-                    // Video's local +X axis, rotated — the turned image X-axis the shot follows.
-                    const dx = m.a, dy = m.b;
+                    // The ship div is positioned so its center sits at (shipX, shipY) in
+                    // viewport coordinates (spaceship-zone is a fixed full-screen layer).
+                    const pivotX = shipX;
+                    const pivotY = shipY;
+                    // Muzzle offset from the ship center, expressed in the ship's 600px
+                    // space, then scaled to the current size. Rotated by the known angle
+                    // (we already track currentAngle, so no DOMMatrix/getComputedStyle needed).
+                    const lx = MUZZLE_X * shipScale;
+                    const ly = MUZZLE_Y * shipScale;
+                    const cos = Math.cos(currentAngle);
+                    const sin = Math.sin(currentAngle);
+                    const ox = pivotX + lx * cos - ly * sin;
+                    const oy = pivotY + lx * sin + ly * cos;
+                    // Local +X axis of the ship, rotated — the direction the shot travels.
+                    const dx = cos, dy = sin;
                     // Speed to cross the canvas diagonal in ~0.7s (assume ~60fps)
                     const diagonal = Math.hypot(ssStarsCanvas.width, ssStarsCanvas.height);
                     const speed = diagonal / (0.7 * 60);
@@ -1509,6 +1521,8 @@ function drawAsteroid(ctx, a) {
         });
 
         window.addEventListener('mousemove', (e) => {
+            // Never steer from a synthesized event over the fire button.
+            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
             if (spaceshipZone.style.display === 'block') {
                 targetY = e.clientY;
                 // keep ship within the bottom band
@@ -1571,6 +1585,8 @@ function drawAsteroid(ctx, a) {
         }, { passive: false });
 
         window.addEventListener('mousedown', (e) => {
+            // Ignore presses that originate on the fire button (handled separately).
+            if (e.target && e.target.closest && e.target.closest('#fire-btn')) return;
             if (e.button === 0 && spaceshipZone.style.display === 'block') {
                 ensureAudio();
                 e.preventDefault(); // stop text-selection/search toolbar, keep firing
@@ -1583,24 +1599,47 @@ function drawAsteroid(ctx, a) {
         });
 
         // Mobile red fire button (no label) — replaces double-tap firing.
-        // Hold to auto-fire (throttled by the loop); stopPropagation keeps the button
-        // press from also steering the ship via the window touch handlers.
+        // Hold to auto-fire (throttled by the loop). We stopPropagation AND preventDefault
+        // on touch so the press can't bubble to the window handlers and steer the ship,
+        // and so the browser won't synthesize mouse/scroll events from the tap.
         const fireBtn = document.getElementById('fire-btn');
         function fireBtnPress(e) {
             e.stopPropagation();
+            if (e.cancelable) e.preventDefault();
             if (spaceshipZone.style.display === 'block') {
                 ensureAudio();
                 isFiring = true;
                 lastShotTime = 0; // fire an immediate throttled shot
             }
         }
-        function fireBtnRelease() { isFiring = false; }
-        fireBtn.addEventListener('touchstart', fireBtnPress, { passive: true });
-        fireBtn.addEventListener('touchend', fireBtnRelease, { passive: true });
-        fireBtn.addEventListener('touchcancel', fireBtnRelease, { passive: true });
+        function fireBtnRelease(e) {
+            if (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }
+            isFiring = false;
+        }
+        fireBtn.addEventListener('touchstart', fireBtnPress, { passive: false });
+        fireBtn.addEventListener('touchend', fireBtnRelease, { passive: false });
+        fireBtn.addEventListener('touchcancel', fireBtnRelease, { passive: false });
         fireBtn.addEventListener('mousedown', fireBtnPress);
         fireBtn.addEventListener('mouseup', fireBtnRelease);
         fireBtn.addEventListener('mouseleave', fireBtnRelease);
+
+        // --- Force the spaceship video to actually play ---
+        // On some mobile browsers muted inline autoplay is still blocked, leaving the
+        // <video> showing its green default first-paint instead of the transparent ship.
+        // Kick off playback as soon as it can, and again on the first user gesture.
+        const shipVideo = spaceshipImg.querySelector('video');
+        function tryPlayShip() {
+            if (shipVideo && shipVideo.paused) {
+                const p = shipVideo.play();
+                if (p && typeof p.catch === 'function') p.catch(() => {});
+            }
+        }
+        if (shipVideo) {
+            shipVideo.addEventListener('canplay', tryPlayShip);
+            shipVideo.addEventListener('loadeddata', tryPlayShip);
+        }
+        window.addEventListener('touchstart', tryPlayShip, { passive: true, once: false });
+        window.addEventListener('mousedown', tryPlayShip, { once: false });
 
         // Clear the scroll-gesture flag on touch release (steering only; firing is via button)
         window.addEventListener('touchend', () => {
@@ -1610,6 +1649,12 @@ function drawAsteroid(ctx, a) {
         // --- Animation Loop for Galaxy ---
         const clock = new THREE.Clock();
         function animateGalaxy() {
+            // The spaceship zone is a fixed full-screen layer on top of the galaxy,
+            // so pause the (expensive WebGL) galaxy render while it's visible.
+            if (spaceshipZone.style.display === 'block') {
+                requestAnimationFrame(animateGalaxy);
+                return;
+            }
             const elapsedTime = clock.getElapsedTime();
             material.uniforms.uTime.value = elapsedTime;
             
