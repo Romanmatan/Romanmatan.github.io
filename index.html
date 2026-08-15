@@ -219,7 +219,6 @@
             left: 0;
             width: 100%;
             height: 100vh;
-            height: 100dvh;
             z-index: 3;
             pointer-events: none;
             overflow: hidden;
@@ -354,16 +353,16 @@
             mix-blend-mode: screen;
         }
 
-        /* Language Toggle */
+        /* Language Toggle — top of page, part of the normal layout (not floating) */
         .lang-toggle {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
+            position: relative;
+            z-index: 5;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 12px;
+            width: fit-content;
+            margin: 18px auto 0;
             padding: 8px 16px;
             background: rgba(20, 0, 40, 0.7);
             border: 1px solid var(--neon-color);
@@ -409,7 +408,7 @@
             border-color: var(--neon-color);
             box-shadow: 0 0 12px var(--neon-color);
         }
-        .mobile .lang-toggle { top: 12px; padding: 6px 12px; }
+        .mobile .lang-toggle { margin-top: 10px; padding: 6px 12px; }
         .mobile .lang-toggle .lang-label { font-size: 0.85rem; }
         .mobile .lang-option { padding: 4px 10px; font-size: 0.85rem; }
 
@@ -1688,17 +1687,6 @@ function drawAsteroid(ctx, a) {
             if (scrollPosition >= bodyHeight - 100) {
                 if (spaceshipZone.style.display !== 'block') {
                     spaceshipZone.style.display = 'block';
-                    // Freeze the page on mobile so the browser's bottom toolbar never
-                    // toggles while the full-screen simulation is shown (no scroll-jacking,
-                    // so no jitter/loops). The overlay is sized to 100dvh, so even if the
-                    // toolbar is already visible there is no gap beneath it.
-                    if (isMobile) lockShipScroll();
-                    // Place the ship at the bottom-center of the *visible* overlay so it
-                    // is on-screen regardless of the mobile toolbar's dynamic viewport.
-                    shipX = spaceshipZone.offsetWidth / 2;
-                    shipY = spaceshipZone.offsetHeight - 200;
-                    targetX = shipX;
-                    targetY = shipY;
                     resizeShipCanvas();
                     initShipStars();
                     initAsteroids();
@@ -1707,7 +1695,6 @@ function drawAsteroid(ctx, a) {
             } else {
                 if (spaceshipZone.style.display === 'block') {
                     spaceshipZone.style.display = 'none';
-                    if (isMobile) unlockShipScroll();
                 }
             }
         });
@@ -1717,10 +1704,8 @@ function drawAsteroid(ctx, a) {
             if (e.target && e.target.closest && e.target.closest('.ship-control-exempt')) return;
             if (spaceshipZone.style.display === 'block') {
                 targetY = e.clientY;
-                // keep ship within the bottom band (use the visible overlay height, not
-                // window.innerHeight, so the ship stays on-screen when the mobile toolbar
-                // changes the visible viewport)
-                if (targetY > spaceshipZone.offsetHeight - 80) targetY = spaceshipZone.offsetHeight - 80;
+                // keep ship within the bottom band
+                if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
                 targetX = e.clientX;
             }
         });
@@ -1742,7 +1727,7 @@ function drawAsteroid(ctx, a) {
             e.preventDefault();
             const t = e.touches[0];
             targetY = t.clientY;
-            if (targetY > spaceshipZone.offsetHeight - 80) targetY = spaceshipZone.offsetHeight - 80;
+            if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
             targetX = t.clientX;
         }, { passive: false });
 
@@ -1790,8 +1775,6 @@ function drawAsteroid(ctx, a) {
         const backBtn = document.getElementById('back-btn');
         function backToContent(e) {
             if (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }
-            // Release the page freeze first so the scroll-to-content can actually move.
-            if (isMobile) unlockShipScroll();
             const content = document.getElementById('content');
             const top = content ? content.getBoundingClientRect().top + window.scrollY : 0;
             window.scrollTo({ top, behavior: 'smooth' });
@@ -1846,47 +1829,9 @@ function drawAsteroid(ctx, a) {
         window.addEventListener('resize', () => {
             resizeHero();
             material.uniforms.uSize.value = 30 * renderer.getPixelRatio();
-                resizeAtmCanvas();
+            resizeAtmCanvas();
             if (spaceshipZone.style.display === 'block') resizeShipCanvas();
         });
-
-        // --- Mobile page freeze (suppress the bottom toolbar during the sim) ---
-        // Instead of scroll-jacking (which causes jitter/loops), we freeze the page
-        // with position:fixed so the layout viewport can't change and the mobile
-        // browser never toggles its bottom toolbar. The overlay is sized to 100dvh,
-        // so even if the toolbar is already visible there is no gap beneath it.
-        let shipScrollLocked = false;
-        let shipSavedScrollY = 0;
-        function lockShipScroll() {
-            if (shipScrollLocked) return;
-            shipSavedScrollY = window.scrollY;
-            const s = document.body.style;
-            s.position = 'fixed';
-            s.top = `-${shipSavedScrollY}px`;
-            s.left = '0';
-            s.right = '0';
-            s.width = '100%';
-            shipScrollLocked = true;
-        }
-        function unlockShipScroll() {
-            if (!shipScrollLocked) return;
-            const s = document.body.style;
-            s.position = '';
-            s.top = '';
-            s.left = '';
-            s.right = '';
-            s.width = '';
-            window.scrollTo(0, shipSavedScrollY);
-            shipScrollLocked = false;
-        }
-
-        // Keep the star/asteroid canvases matched to the visible viewport while the
-        // sim is active; the mobile toolbar toggling changes the dynamic viewport.
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                if (spaceshipZone.style.display === 'block') resizeShipCanvas();
-            });
-        }
 
         // --- Initializations ---
         resizeAtmCanvas();
