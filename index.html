@@ -267,6 +267,11 @@
         .mobile #spaceship { width: 200px; }
         .mobile #spaceship video { width: 200px; transform: translate(-8px, -1px); }
 
+        /* Hidden spacer used on mobile while the spaceship simulation is active to
+           keep the page from reaching the true document bottom (prevents the mobile
+           browser's bottom toolbar from appearing and shrinking 100vh). */
+        #ship-spacer { height: 0; }
+
         #spaceship video {
             display: block;
             width: 600px;
@@ -353,6 +358,65 @@
             mix-blend-mode: screen;
         }
 
+        /* Language Toggle */
+        .lang-toggle {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(20, 0, 40, 0.7);
+            border: 1px solid var(--neon-color);
+            border-radius: 30px;
+            box-shadow: 0 0 14px rgba(188, 19, 254, 0.5);
+            font-family: 'Raleway', sans-serif;
+            pointer-events: auto;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            user-select: none;
+        }
+        .lang-toggle .lang-label {
+            color: #fff;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 6px rgba(188, 19, 254, 0.6);
+        }
+        .lang-option {
+            background: transparent;
+            border: 1px solid rgba(188, 19, 254, 0.5);
+            color: #e0e0e0;
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        .lang-option:hover {
+            color: #fff;
+            border-color: var(--neon-color);
+            box-shadow: 0 0 8px rgba(188, 19, 254, 0.6);
+        }
+        .lang-option.active {
+            background: var(--neon-color);
+            color: #fff;
+            border-color: var(--neon-color);
+            box-shadow: 0 0 12px var(--neon-color);
+        }
+        .mobile .lang-toggle { top: 12px; padding: 6px 12px; }
+        .mobile .lang-toggle .lang-label { font-size: 0.85rem; }
+        .mobile .lang-option { padding: 4px 10px; font-size: 0.85rem; }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0a0014; }
@@ -369,6 +433,14 @@
 <body>
 
     <div class="cursor"></div>
+
+    <!-- Language Toggle (RU / EN) -->
+    <div class="lang-toggle" id="lang-toggle">
+        <span class="lang-label" data-i18n="langLabel">Язык:</span>
+        <button class="lang-option active" data-lang="ru" type="button">RU</button>
+        <button class="lang-option" data-lang="en" type="button">EN</button>
+    </div>
+
     <canvas id="atmosphere-canvas"></canvas>
 
     <!-- Hero Section: 3D Galaxy -->
@@ -386,14 +458,14 @@
                 <div class="portfolio-frame">
                     <div class="frame-content">
                         <div class="profile-header">
-                            <img src="Photo.jpeg" alt="Симонов Роман Валерьевич" class="profile-photo">
+                            <img src="Photo.jpeg" alt="Симонов Роман Валерьевич" class="profile-photo" data-i18n="photoAlt">
                             <div>
-                                <h2>Симонов Роман Валерьевич</h2>
-                                <p style="font-size: 1.2rem; color: #bc13fe;">Профессиональные навыки</p>
+                                <h2 data-i18n="name">Симонов Роман Валерьевич</h2>
+                                <p style="font-size: 1.2rem; color: #bc13fe;" data-i18n="skillsTitle">Профессиональные навыки</p>
                             </div>
                         </div>
                         <br>
-                        <p>Разработка ПО с применением:</p>
+                        <p data-i18n="skillsIntro">Разработка ПО с применением:</p>
                         <ul class="skills-list">
                             <li>Python</li>
                             <li>C++</li>
@@ -401,11 +473,11 @@
                             <li>PyTorch</li>
                             <li>MySQL</li>
                         </ul>
-                        <p>Работа с ос Linux</p>
-                        <p>Разработка ПО для встраиваемых систем (микроконтроллеры STM32, Миландр)</p>
-                        <p>Машинное обучение, применение нейросетей для программирования и создания изображений.</p>
-                        <p>Знания в области схемотехники электронного оборудования, физики, математического анализа. Навыки работы в Mathcad и Matlab.</p>
-                        <p>Специализация включает применение методов машинного обучения и цифровой обработки сигналов.</p>
+                        <p data-i18n="linuxText">Работа с ос Linux</p>
+                        <p data-i18n="embeddedText">Разработка ПО для встраиваемых систем (микроконтроллеры STM32, Миландр)</p>
+                        <p data-i18n="mlText">Машинное обучение, применение нейросетей для программирования и создания изображений.</p>
+                        <p data-i18n="circuitText">Знания в области схемотехники электронного оборудования, физики, математического анализа. Навыки работы в Mathcad и Matlab.</p>
+                        <p data-i18n="specializationText">Специализация включает применение методов машинного обучения и цифровой обработки сигналов.</p>
                     </div>
                 </div>
             </div>
@@ -414,10 +486,10 @@
             <div class="portfolio-item" id="item-2">
                 <div class="portfolio-frame">
                         <div class="frame-content">
-                            <h2>Учёная степень</h2>
-                            <p>Кандидат физико-математических наук. Тема диссертации: развитие методов оптимальной обработки ультразвуковых сигналов, защищена в Институте радиотехники и электроники им. В.А.Котельникова Российской академии наук.</p>
-                            </p> Научный руководитель: дф-мн, профессор Пахотин В. А.</a></p>
-							<p>С диссертацией можно ознакомиться по ссылке: <a href="http://www.cplire.ru/rus/dissertations/Simonov/" target="_blank">cplire.ru/rus/dissertations/Simonov/</a></p>
+                            <h2 data-i18n="degreeTitle">Учёная степень</h2>
+                            <p data-i18n="degreeText">Кандидат физико-математических наук. Тема диссертации: развитие методов оптимальной обработки ультразвуковых сигналов, защищена в Институте радиотехники и электроники им. В.А.Котельникова Российской академии наук.</p>
+                            <p data-i18n="advisorText">Научный руководитель: дф-мн, профессор Пахотин В. А.</p>
+							<p data-i18n="dissLinkText">С диссертацией можно ознакомиться по ссылке: <a href="http://www.cplire.ru/rus/dissertations/Simonov/" target="_blank">cplire.ru/rus/dissertations/Simonov/</a></p>
                         </div>
                     </div>
             </div>
@@ -426,11 +498,11 @@
             <div class="portfolio-item" id="item-3">
                 <div class="portfolio-frame">
                         <div class="frame-content">
-                            <h2>Место работы и публикации</h2>
-                            <p>НИИ Прикладной информатики и математической геофизики: <a href="https://kantiana.ru/science/departments/aimg/?ysclid=msowh4ixt6841084694" target="_blank">kantiana.ru</a></p>
-                            <p>Работа в команде над разработкой программного комплекса RTH-AI, позволяющего прогнозировать петрофизические, литологические и иные свойства коллектора углеводородов: <a href="https://rthtech.ru/" target="_blank">rthtech.ru</a></p>
-                            <p>Автор большого количества научных публикаций по цифровой обработке сигналов и сейсморазведке. С публикациями можно ознакомиться по ссылке <a href="https://elibrary.ru/author_items.asp?authorid=1042819" target="_blank">elibrary.ru</a></p>
-                            <p>Автор зарегистрированной программы для ЭВМ №2019661261 "Азимут", осуществляющей подавление помех при обработке радиолокационных сигналов.</p>
+                            <h2 data-i18n="workTitle">Место работы и публикации</h2>
+                            <p data-i18n="workText1">НИИ Прикладной информатики и математической геофизики: <a href="https://kantiana.ru/science/departments/aimg/?ysclid=msowh4ixt6841084694" target="_blank">kantiana.ru</a></p>
+                            <p data-i18n="workText2">Работа в команде над разработкой программного комплекса RTH-AI, позволяющего прогнозировать петрофизические, литологические и иные свойства коллектора углеводородов: <a href="https://rthtech.ru/" target="_blank">rthtech.ru</a></p>
+                            <p data-i18n="workText3">Автор большого количества научных публикаций по цифровой обработке сигналов и сейсморазведке. С публикациями можно ознакомиться по ссылке <a href="https://elibrary.ru/author_items.asp?authorid=1042819" target="_blank">elibrary.ru</a></p>
+                            <p data-i18n="workText4">Автор зарегистрированной программы для ЭВМ №2019661261 "Азимут", осуществляющей подавление помех при обработке радиолокационных сигналов.</p>
                         </div>
                     </div>
             </div>
@@ -455,6 +527,79 @@
         // --- Mobile Detection ---
         const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
         if (isMobile) document.body.classList.add('mobile');
+
+        // --- Language Switching (RU / EN) ---
+        const translations = {
+            ru: {
+                langLabel: 'Язык:',
+                pageTitle: 'Cosmic Portfolio - Симонов Роман Валерьевич',
+                photoAlt: 'Симонов Роман Валерьевич',
+                name: 'Симонов Роман Валерьевич',
+                skillsTitle: 'Профессиональные навыки',
+                skillsIntro: 'Разработка ПО с применением:',
+                linuxText: 'Работа с ос Linux',
+                embeddedText: 'Разработка ПО для встраиваемых систем (микроконтроллеры STM32, Миландр)',
+                mlText: 'Машинное обучение, применение нейросетей для программирования и создания изображений.',
+                circuitText: 'Знания в области схемотехники электронного оборудования, физики, математического анализа. Навыки работы в Mathcad и Matlab.',
+                specializationText: 'Специализация включает применение методов машинного обучения и цифровой обработки сигналов.',
+                degreeTitle: 'Учёная степень',
+                degreeText: 'Кандидат физико-математических наук. Тема диссертации: Развитие методов оптимальной обработки ультразвуковых сигналов. Диссертация защищена в Институте радиотехники и электроники им. В.А.Котельникова Российской академии наук.',
+                advisorText: 'Научный руководитель: дф-мн, профессор Пахотин В. А.',
+                dissLinkText: 'С диссертацией можно ознакомиться по ссылке: <a href="http://www.cplire.ru/rus/dissertations/Simonov/" target="_blank">cplire.ru/rus/dissertations/Simonov/</a>',
+                workTitle: 'Место работы и публикации',
+                workText1: 'НИИ Прикладной информатики и математической геофизики: <a href="https://kantiana.ru/science/departments/aimg/?ysclid=msowh4ixt6841084694" target="_blank">kantiana.ru</a>',
+                workText2: 'Работа в команде над разработкой программного комплекса RTH-AI, позволяющего прогнозировать петрофизические, литологические и иные свойства коллектора углеводородов: <a href="https://rthtech.ru/" target="_blank">rthtech.ru</a>',
+                workText3: 'Автор большого количества научных публикаций по цифровой обработке сигналов и сейсморазведке. С публикациями можно ознакомиться по ссылке <a href="https://elibrary.ru/author_items.asp?authorid=1042819" target="_blank">elibrary.ru</a>',
+                workText4: 'Автор зарегистрированной программы для ЭВМ №2019661261 "Азимут", осуществляющей подавление помех при обработке радиолокационных сигналов.'
+            },
+            en: {
+                langLabel: 'Language:',
+                pageTitle: 'Cosmic Portfolio - Simonov Roman Valerievich',
+                photoAlt: 'Simonov Roman Valeryevich',
+                name: 'Simonov Roman Valeryevich',
+                skillsTitle: 'Professional Skills',
+                skillsIntro: 'Software development using:',
+                linuxText: 'Working with Linux OS',
+                embeddedText: 'Software development for embedded systems (STM32, Milandr microcontrollers)',
+                mlText: 'Machine learning, applying neural networks for programming and image generation.',
+                circuitText: 'Knowledge in electronic equipment circuit design, physics, and mathematical analysis. Proficiency with Mathcad and Matlab.',
+                specializationText: 'Specialization includes applying machine learning methods and digital signal processing.',
+                degreeTitle: 'Academic Degree',
+                degreeText: 'Candidate of Physical and Mathematical Sciences. Dissertation topic: Development of optimal ultrasonic signal processing methods, defended at the Kotelnikov Institute of Radio Engineering and Electronics of the Russian Academy of Sciences.',
+                advisorText: 'Academic advisor: Dr. of Phys.-Math. Sci., Professor Pakhotin V. A.',
+                dissLinkText: 'The dissertation is available at: <a href="http://www.cplire.ru/rus/dissertations/Simonov/" target="_blank">cplire.ru/rus/dissertations/Simonov/</a>',
+                workTitle: 'Place of Work and Publications',
+                workText1: 'Institute of Applied Informatics and Mathematical Geophysics: <a href="https://kantiana.ru/science/departments/aimg/?ysclid=msowh4ixt6841084694" target="_blank">kantiana.ru</a>',
+                workText2: 'Team work on the development of the RTH-AI software suite for predicting petrophysical, lithological and other hydrocarbon reservoir properties: <a href="https://rthtech.ru/" target="_blank">rthtech.ru</a>',
+                workText3: 'Author of numerous scientific publications on digital signal processing and seismic exploration. Publications are available at <a href="https://elibrary.ru/author_items.asp?authorid=1042819" target="_blank">elibrary.ru</a>',
+                workText4: 'Author of the registered computer program No. 2019661261 "Azimuth", which suppresses interference in radar signal processing.'
+            }
+        };
+
+        function applyLang(lang) {
+            const dict = translations[lang] || translations.ru;
+            document.documentElement.lang = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key] !== undefined) el.innerHTML = dict[key];
+            });
+            document.title = dict.pageTitle;
+            document.querySelectorAll('.lang-option').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+            try { localStorage.setItem('siteLang', lang); } catch (e) {}
+        }
+
+        document.querySelectorAll('.lang-option').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                applyLang(btn.dataset.lang);
+            });
+        });
+
+        let savedLang = 'ru';
+        try { savedLang = localStorage.getItem('siteLang') || 'ru'; } catch (e) {}
+        applyLang(savedLang);
 
         // Mobile motion is halved so asteroids/particles aren't too fast on phones.
         const SPEED_M = isMobile ? 0.5 : 1;
@@ -901,6 +1046,7 @@
 
         // --- Spaceship Logic ---
         const spaceshipZone = document.getElementById('spaceship-zone');
+        const shipSpacer = document.getElementById('ship-spacer');
         const spaceshipImg = document.getElementById('spaceship');
         const ssStarsCanvas = document.getElementById('spaceship-stars');
         const ssCtx = ssStarsCanvas.getContext('2d');
@@ -1547,14 +1693,21 @@ function drawAsteroid(ctx, a) {
             if (scrollPosition >= bodyHeight - 100) {
                 if (spaceshipZone.style.display !== 'block') {
                     spaceshipZone.style.display = 'block';
+                    // On mobile, add a full-viewport spacer below the content so the
+                    // underlying page never reaches the true document bottom. This stops
+                    // mobile browsers from revealing their bottom toolbar (which shrinks
+                    // 100vh) while the fixed full-screen simulation is shown.
+                    if (isMobile) shipSpacer.style.height = window.innerHeight + 'px';
                     resizeShipCanvas();
                     initShipStars();
                     initAsteroids();
                     startShipLoop();
+                    clampShipScroll();
                 }
             } else {
                 if (spaceshipZone.style.display === 'block') {
                     spaceshipZone.style.display = 'none';
+                    if (isMobile) shipSpacer.style.height = '0';
                 }
             }
         });
@@ -1689,15 +1842,35 @@ function drawAsteroid(ctx, a) {
         window.addEventListener('resize', () => {
             resizeHero();
             material.uniforms.uSize.value = 30 * renderer.getPixelRatio();
-            resizeAtmCanvas();
+                resizeAtmCanvas();
             if (spaceshipZone.style.display === 'block') resizeShipCanvas();
+            clampShipScroll();
         });
+
+        // Keep the page pinned above the real document bottom while the simulation
+        // is active on mobile, so the browser never reveals its bottom toolbar/URL
+        // bar (which would shrink 100vh and leave a gap under the fixed overlay).
+        function clampShipScroll() {
+            if (!isMobile || spaceshipZone.style.display !== 'block') return;
+            const max = document.documentElement.scrollHeight - shipSpacer.offsetHeight - window.innerHeight - 2;
+            if (window.scrollY > max) window.scrollTo(0, max);
+        }
+        window.addEventListener('scroll', clampShipScroll, { passive: true });
+        window.addEventListener('resize', clampShipScroll, { passive: true });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', clampShipScroll);
+            window.visualViewport.addEventListener('scroll', clampShipScroll);
+        }
 
         // --- Initializations ---
         resizeAtmCanvas();
         drawAtmosphere();
         animateGalaxy();
-
     </script>
+
+    <!-- Hidden spacer: on mobile, grown to 1 viewport height while the spaceship
+         simulation is active to keep the page from reaching the true document
+         bottom (which would trigger the mobile browser's bottom toolbar). -->
+    <div id="ship-spacer" aria-hidden="true"></div>
 </body>
 </html>
