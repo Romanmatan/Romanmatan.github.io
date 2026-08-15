@@ -219,6 +219,7 @@
             left: 0;
             width: 100%;
             height: 100vh;
+            height: 100dvh;
             z-index: 3;
             pointer-events: none;
             overflow: hidden;
@@ -266,11 +267,6 @@
         /* Mobile: ship 3x smaller */
         .mobile #spaceship { width: 200px; }
         .mobile #spaceship video { width: 200px; transform: translate(-8px, -1px); }
-
-        /* Hidden spacer used on mobile while the spaceship simulation is active to
-           keep the page from reaching the true document bottom (prevents the mobile
-           browser's bottom toolbar from appearing and shrinking 100vh). */
-        #ship-spacer { height: 0; }
 
         #spaceship video {
             display: block;
@@ -1046,7 +1042,6 @@
 
         // --- Spaceship Logic ---
         const spaceshipZone = document.getElementById('spaceship-zone');
-        const shipSpacer = document.getElementById('ship-spacer');
         const spaceshipImg = document.getElementById('spaceship');
         const ssStarsCanvas = document.getElementById('spaceship-stars');
         const ssCtx = ssStarsCanvas.getContext('2d');
@@ -1693,21 +1688,26 @@ function drawAsteroid(ctx, a) {
             if (scrollPosition >= bodyHeight - 100) {
                 if (spaceshipZone.style.display !== 'block') {
                     spaceshipZone.style.display = 'block';
-                    // On mobile, add a full-viewport spacer below the content so the
-                    // underlying page never reaches the true document bottom. This stops
-                    // mobile browsers from revealing their bottom toolbar (which shrinks
-                    // 100vh) while the fixed full-screen simulation is shown.
-                    if (isMobile) shipSpacer.style.height = window.innerHeight + 'px';
+                    // Freeze the page on mobile so the browser's bottom toolbar never
+                    // toggles while the full-screen simulation is shown (no scroll-jacking,
+                    // so no jitter/loops). The overlay is sized to 100dvh, so even if the
+                    // toolbar is already visible there is no gap beneath it.
+                    if (isMobile) lockShipScroll();
+                    // Place the ship at the bottom-center of the *visible* overlay so it
+                    // is on-screen regardless of the mobile toolbar's dynamic viewport.
+                    shipX = spaceshipZone.offsetWidth / 2;
+                    shipY = spaceshipZone.offsetHeight - 200;
+                    targetX = shipX;
+                    targetY = shipY;
                     resizeShipCanvas();
                     initShipStars();
                     initAsteroids();
                     startShipLoop();
-                    clampShipScroll();
                 }
             } else {
                 if (spaceshipZone.style.display === 'block') {
                     spaceshipZone.style.display = 'none';
-                    if (isMobile) shipSpacer.style.height = '0';
+                    if (isMobile) unlockShipScroll();
                 }
             }
         });
@@ -1717,8 +1717,10 @@ function drawAsteroid(ctx, a) {
             if (e.target && e.target.closest && e.target.closest('.ship-control-exempt')) return;
             if (spaceshipZone.style.display === 'block') {
                 targetY = e.clientY;
-                // keep ship within the bottom band
-                if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
+                // keep ship within the bottom band (use the visible overlay height, not
+                // window.innerHeight, so the ship stays on-screen when the mobile toolbar
+                // changes the visible viewport)
+                if (targetY > spaceshipZone.offsetHeight - 80) targetY = spaceshipZone.offsetHeight - 80;
                 targetX = e.clientX;
             }
         });
@@ -1740,7 +1742,7 @@ function drawAsteroid(ctx, a) {
             e.preventDefault();
             const t = e.touches[0];
             targetY = t.clientY;
-            if (targetY > window.innerHeight - 80) targetY = window.innerHeight - 80;
+            if (targetY > spaceshipZone.offsetHeight - 80) targetY = spaceshipZone.offsetHeight - 80;
             targetX = t.clientX;
         }, { passive: false });
 
@@ -1788,6 +1790,8 @@ function drawAsteroid(ctx, a) {
         const backBtn = document.getElementById('back-btn');
         function backToContent(e) {
             if (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }
+            // Release the page freeze first so the scroll-to-content can actually move.
+            if (isMobile) unlockShipScroll();
             const content = document.getElementById('content');
             const top = content ? content.getBoundingClientRect().top + window.scrollY : 0;
             window.scrollTo({ top, behavior: 'smooth' });
@@ -1844,22 +1848,44 @@ function drawAsteroid(ctx, a) {
             material.uniforms.uSize.value = 30 * renderer.getPixelRatio();
                 resizeAtmCanvas();
             if (spaceshipZone.style.display === 'block') resizeShipCanvas();
-            clampShipScroll();
         });
 
-        // Keep the page pinned above the real document bottom while the simulation
-        // is active on mobile, so the browser never reveals its bottom toolbar/URL
-        // bar (which would shrink 100vh and leave a gap under the fixed overlay).
-        function clampShipScroll() {
-            if (!isMobile || spaceshipZone.style.display !== 'block') return;
-            const max = document.documentElement.scrollHeight - shipSpacer.offsetHeight - window.innerHeight - 2;
-            if (window.scrollY > max) window.scrollTo(0, max);
+        // --- Mobile page freeze (suppress the bottom toolbar during the sim) ---
+        // Instead of scroll-jacking (which causes jitter/loops), we freeze the page
+        // with position:fixed so the layout viewport can't change and the mobile
+        // browser never toggles its bottom toolbar. The overlay is sized to 100dvh,
+        // so even if the toolbar is already visible there is no gap beneath it.
+        let shipScrollLocked = false;
+        let shipSavedScrollY = 0;
+        function lockShipScroll() {
+            if (shipScrollLocked) return;
+            shipSavedScrollY = window.scrollY;
+            const s = document.body.style;
+            s.position = 'fixed';
+            s.top = `-${shipSavedScrollY}px`;
+            s.left = '0';
+            s.right = '0';
+            s.width = '100%';
+            shipScrollLocked = true;
         }
-        window.addEventListener('scroll', clampShipScroll, { passive: true });
-        window.addEventListener('resize', clampShipScroll, { passive: true });
+        function unlockShipScroll() {
+            if (!shipScrollLocked) return;
+            const s = document.body.style;
+            s.position = '';
+            s.top = '';
+            s.left = '';
+            s.right = '';
+            s.width = '';
+            window.scrollTo(0, shipSavedScrollY);
+            shipScrollLocked = false;
+        }
+
+        // Keep the star/asteroid canvases matched to the visible viewport while the
+        // sim is active; the mobile toolbar toggling changes the dynamic viewport.
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', clampShipScroll);
-            window.visualViewport.addEventListener('scroll', clampShipScroll);
+            window.visualViewport.addEventListener('resize', () => {
+                if (spaceshipZone.style.display === 'block') resizeShipCanvas();
+            });
         }
 
         // --- Initializations ---
@@ -1867,10 +1893,5 @@ function drawAsteroid(ctx, a) {
         drawAtmosphere();
         animateGalaxy();
     </script>
-
-    <!-- Hidden spacer: on mobile, grown to 1 viewport height while the spaceship
-         simulation is active to keep the page from reaching the true document
-         bottom (which would trigger the mobile browser's bottom toolbar). -->
-    <div id="ship-spacer" aria-hidden="true"></div>
 </body>
 </html>
